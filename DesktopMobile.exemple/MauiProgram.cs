@@ -15,10 +15,17 @@ namespace DesktopMobile.exemple
                 });
 
             builder.Services.AddMauiBlazorWebView();
-
+            builder.Services.AddMsalAuthentication(options =>
+            {
+                var authentication = options.ProviderOptions.Authentication;
+                authentication.Authority = "https://localhost:5001";
+                authentication.ClientId = "client_id_credentials";
+                authentication.RedirectUri = "com.client.credentials://callback";
+                authentication.PostLogoutRedirectUri = "com.client.credentials://callback";
+            });
 #if DEBUG
-    		builder.Services.AddBlazorWebViewDeveloperTools();
-    		builder.Logging.AddDebug();
+            builder.Services.AddBlazorWebViewDeveloperTools();
+            builder.Logging.AddDebug();
 #endif
 
             return builder.Build();

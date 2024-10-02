@@ -1,13 +1,49 @@
-using ClientCodeApp.exemple.Data;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.Net.Http.Headers;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
-builder.Services.AddSingleton<WeatherForecastService>();
+
+builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddHttpClient("IDPClient", client =>
+{
+    client.BaseAddress = new Uri("https://localhost:44318/");
+    client.DefaultRequestHeaders.Clear();
+    client.DefaultRequestHeaders.Add(HeaderNames.Accept, "application/json");
+});
+
+builder.Services.AddAuthentication(opt =>
+{
+    opt.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    opt.DefaultChallengeScheme = "OAuth2";
+})
+.AddCookie(CookieAuthenticationDefaults.AuthenticationScheme)
+.AddOAuth("OAuth2", opt =>
+{
+    opt.ClientId = "client_id_code";
+    opt.ClientSecret = "client_secret_code";
+    opt.CallbackPath = "/callback";
+    opt.AuthorizationEndpoint = "https://localhost:5001/connect/authorize";
+    opt.TokenEndpoint = "https://localhost:5001/connect/token";
+    opt.UserInformationEndpoint = "https://localhost:5001/connect/userinfo";
+    opt.Scope.Add("rewardsApi.read");
+    opt.SaveTokens = true;
+    opt.ClaimActions.MapJsonKey("role", "role");
+    opt.UsePkce = true;
+});
+
+builder.Services.AddAuthorizationCore(opt =>
+{
+    opt.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
 
 var app = builder.Build();
 
@@ -24,6 +60,9 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
